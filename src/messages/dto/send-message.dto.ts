@@ -2,8 +2,12 @@ import { IsString,IsNumber,IsNotEmpty,IsOptional,IsObject,IsArray } from "class-
 
 
 export class SendMessageDto{
+    // @IsNumber()
+    // partnerId!:number
+    @IsString()
+    externalReferenceId!:string
     @IsNumber()
-    partnerId!:number
+    erpPartnerId!:number
 
     @IsString()
     @IsNotEmpty()

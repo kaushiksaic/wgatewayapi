@@ -8,10 +8,12 @@ import { DatabaseService } from './config/database/database.service';
 import {ConfigModule} from '@nestjs/config'
 import { WebhooksModule } from './webhooks/webhooks.module';
 import { RabbitModule } from './rabbit/rabbit.module';
+import { PartnersModule } from './partners/partners.module';
+import { WalletModule } from './wallet/wallet.module';
 
 
 @Module({
-  imports: [TemplatesModule, MessagesModule, AuthModule,ConfigModule.forRoot({isGlobal:true}), WebhooksModule, RabbitModule],
+  imports: [TemplatesModule, MessagesModule, AuthModule, PartnersModule, ConfigModule.forRoot({isGlobal:true}), WebhooksModule, RabbitModule, WalletModule],
   controllers: [AppController],
   providers: [AppService, DatabaseService],
 })

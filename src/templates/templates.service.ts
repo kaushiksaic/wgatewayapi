@@ -519,4 +519,142 @@ export class TemplatesService {
     };
   }
     }
+  async listTemplates(gatewayPartnerId?: number) {
+    if (gatewayPartnerId !== undefined && !Number.isNaN(gatewayPartnerId)) {
+      return this.getTemplatesByGatewayPartner(gatewayPartnerId);
+    }
+    return this.getAllTemplates();
+  }
+
+  async getAllTemplates() {
+    const pool = await sql.connect();
+    try {
+      const templateResult = await pool.request().query(`
+        SELECT
+          TemplateId,
+          TemplateCode,
+          TemplateName,
+          Category,
+          LanguageCode,
+          HeaderText,
+          BodyText,
+          FooterText,
+          MetaStatus
+        FROM MessageTemplates
+        WHERE IsActive = 1
+        ORDER BY TemplateName
+      `);
+
+      const templates = templateResult.recordset.map((row) => ({
+        templateId: row.TemplateId,
+        templateCode: row.TemplateCode,
+        templateName: row.TemplateName,
+        category: row.Category,
+        languageCode: row.LanguageCode,
+        headerText: row.HeaderText,
+        bodyText: row.BodyText,
+        footerText: row.FooterText,
+        metaStatus: row.MetaStatus,
+        variables: [] as unknown[],
+      }));
+
+      return { success: true, data: templates };
+    } catch (error) {
+      return {
+        success: false,
+        message: 'Failed to fetch templates',
+        error: error instanceof Error ? error.message : 'Unknown error',
+      };
+    }
+  }
+
+  async getTemplatesByGatewayPartner(gatewayPartnerId: number) {
+    const pool = await sql.connect();
+    try {
+      const templateResult = await pool
+        .request()
+        .input('PartnerId', sql.BigInt, gatewayPartnerId)
+        .query(`
+          SELECT
+            mt.TemplateId,
+            mt.TemplateCode,
+            mt.TemplateName,
+            mt.Category,
+            mt.LanguageCode,
+            mt.HeaderText,
+            mt.BodyText,
+            mt.FooterText,
+            mt.MetaStatus
+          FROM PartnerTemplateMapping ptm
+          INNER JOIN MessageTemplates mt ON ptm.TemplateId = mt.TemplateId
+          WHERE ptm.PartnerId = @PartnerId
+            AND ptm.IsEnabled = 1
+            AND mt.IsActive = 1
+          ORDER BY mt.TemplateName
+        `);
+
+      const templates: unknown[] = [];
+      for (const template of templateResult.recordset) {
+        const variableResult = await pool
+          .request()
+          .input('TemplateId', sql.BigInt, template.TemplateId)
+          .query(`
+            SELECT VariableName, VariableOrder, SampleValue
+            FROM TemplateVariables
+            WHERE TemplateId = @TemplateId
+            ORDER BY VariableOrder
+          `);
+
+        templates.push({
+          templateId: template.TemplateId,
+          templateCode: template.TemplateCode,
+          templateName: template.TemplateName,
+          category: template.Category,
+          languageCode: template.LanguageCode,
+          headerText: template.HeaderText,
+          bodyText: template.BodyText,
+          footerText: template.FooterText,
+          metaStatus: template.MetaStatus,
+          variables: variableResult.recordset,
+        });
+      }
+
+      return { success: true, data: templates };
+    } catch (error) {
+      return {
+        success: false,
+        message: 'Failed to fetch templates',
+        error: error instanceof Error ? error.message : 'Unknown error',
+      };
+    }
+  }
+
+  /** Legacy: resolve ERP id via PartnerExternalMapping */
+  async getTemplatesByPartner(erpPartnerId: string) {
+    const pool = await sql.connect();
+    try {
+      const partnerResult = await pool
+        .request()
+        .input('ErpPartnerId', sql.VarChar, erpPartnerId)
+        .query(`
+          SELECT GatewayPartnerId
+          FROM PartnerExternalMapping
+          WHERE ErpPartnerId = @ErpPartnerId AND IsActive = 1
+        `);
+
+      if (partnerResult.recordset.length === 0) {
+        return { success: false, message: 'Partner mapping not found' };
+      }
+
+      return this.getTemplatesByGatewayPartner(
+        partnerResult.recordset[0].GatewayPartnerId,
+      );
+    } catch (error) {
+      return {
+        success: false,
+        message: 'Failed to fetch templates',
+        error: error instanceof Error ? error.message : 'Unknown error',
+      };
+    }
+  }
 }

@@ -1,12 +1,22 @@
-import { IsString,IsNotEmpty,IsOptional,IsArray,ValidateNested,IsNumber } from "class-validator";
-import { Type } from "class-transformer";
+import {
+  IsString,
+  IsNotEmpty,
+  IsOptional,
+  IsArray,
+  ValidateNested,
+  IsInt,
+  Min,
+} from 'class-validator';
+import { Type } from 'class-transformer';
 
 class TemplateVariableDto {
     @IsString()
     @IsNotEmpty()
     variableName!: string;
 
-    @IsNumber()
+    @Type(() => Number)
+    @IsInt()
+    @Min(1)
     variableOrder!: number;
 
     @IsString()
@@ -55,7 +65,9 @@ export class CreateTemplateDto {
   @IsOptional()
   buttonJson?: any;
 
-  @IsNumber()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
   createdBy!: number;
 
 

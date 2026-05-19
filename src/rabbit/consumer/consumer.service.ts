@@ -230,6 +230,11 @@ constructor(
           sql.NVarChar(sql.MAX),
           JSON.stringify(response.data),
         )
+        .input(
+          'ExternalReferenceId',
+          sql.VarChar,
+          data.externalReferenceId
+        )
         .query(`
           INSERT INTO MessageSendLog
           (
@@ -240,7 +245,8 @@ constructor(
             ApiRequestPayload,
             ApiResponsePayload,
             ApiStatus,
-            SentAt
+            SentAt,
+            ExternalReferenceId
           )
           VALUES
           (
@@ -251,7 +257,8 @@ constructor(
             @ApiRequestPayload,
             @ApiResponsePayload,
             'SUCCESS',
-            GETDATE()
+            GETDATE(),
+            @ExternalReferenceId
           )
         `);
 
